@@ -50,7 +50,7 @@ This project delivers an autonomous, decentralized water purification unit desig
 
 ## ✨ Key Features & Technical Specs
 
-* [cite_start]**☀️ 100% Off-Grid Energy Harvesting:** The system is powered by a 12V 25W polycrystalline solar panel operating with a solar-priority model.In regions like Sehore, it generates approximately 110 Wh daily, ensuring sustained power for the 15W operational load.Energy is buffered by a high-density 12V 7AH Lithium Polymer (Li-Po) battery, which offers an 85% depth-of-discharge and maintains an energy buffer sufficient for three days of autonomous operation.
+* **☀️ 100% Off-Grid Energy Harvesting:** The system is powered by a 12V 25W polycrystalline solar panel operating with a solar-priority model.In regions like Sehore, it generates approximately 110 Wh daily, ensuring sustained power for the 15W operational load.Energy is buffered by a high-density 12V 7AH Lithium Polymer (Li-Po) battery, which offers an 85% depth-of-discharge and maintains an energy buffer sufficient for three days of autonomous operation.
   
 * **💧 Sequential Filtration & Total Dynamic Head (TDH):** A 24V DC booster pump generates a calculated TDH of 4.0 meters (accounting for 2.5m vertical lift and 1.5m frictional losses) to drive water through the filters. The sequence deliberately routes water through a Granular Activated Carbon filter first (for odor/chemical adsorption), followed by a 5-micron PP sediment filter to protect the downstream UV-C quartz sleeve from particulate fouling.
   
