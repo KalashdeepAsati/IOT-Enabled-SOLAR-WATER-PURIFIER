@@ -86,7 +86,7 @@ This project delivers an autonomous, decentralized water purification unit desig
 
 ## 🧠 System Architecture
 
-[cite_start]The architecture is divided into three synchronized layers: Energy, Purification, and Monitoring[cite: 185]. 
+The architecture is divided into three synchronized layers: Energy, Purification, and Monitoring. 
 
 <p align="center">
   <img src="assets/System Architecture of Smart Water Purification System with IoT-Based Monitoring and Control.png" alt="System Architecture Diagram" width="800">
