@@ -1,0 +1,280 @@
+#include <LiquidCrystal.h>//import the LCD library
+#include <SoftwareSerial.h>
+#include <EEPROM.h>
+#include "GravityTDS.h"
+LiquidCrystal lcd(2,3,4,5,6,7);// Pins used for RS,E,D4,D5,D6,D7
+SoftwareSerial ser(9,10);
+
+float charge=0;
+float volt=0;
+int count=0;
+int gas=0;
+int i=0;
+char data = 0;
+String response = "";
+String response1 = "";  
+String apiKey = "E2CGS9HTVP8P2M3V";     
+
+float state1=0;
+float state2=0;
+float state3=0;
+float state4=0;
+
+#define buzz 8
+
+#define TdsSensorPin A0
+GravityTDS gravityTds;
+float temperature = 25, tdsValue = 0;
+
+
+float tds=0;
+
+void setup() 
+{
+
+pinMode(buzz,OUTPUT); 
+
+Serial.begin(115200); // Set the baud rate to 115200 for the Serial Monitor
+gravityTds.setPin(TdsSensorPin);
+gravityTds.setAref(5.0); // Set the analog reference voltage (5.0V for Arduino UNO)
+gravityTds.setAdcRange(1024); // Set the ADC range (1024 for 10-bit ADC like UNO)
+gravityTds.begin(); 
+
+ser.begin(115200); 
+lcd.begin(16,2);
+lcd.clear();
+lcd.setCursor(0,0);
+
+lcd.print("  IOT & SOLAR");
+lcd.setCursor(0,1);
+lcd.print(" WATER PURIFIER");
+delay(2000);
+
+lcd.clear();
+lcd.print("Initializing");
+lcd.setCursor(0,1);
+lcd.print("Please Wait...");
+delay(50);
+
+ser.println("AT");
+delay(100);
+ser.println("AT+GMR");
+delay(100);
+ser.println("AT+CWMODE=3");
+delay(100);
+ser.println("AT+CIPMUX=1");
+delay(100);
+String cmd="AT+CWJAP=\"data\",\"data1234\"";
+ser.println(cmd);
+delay(100);
+  
+  while(ser.available())
+      {
+        char c = ser.read();   // The esp has data so display its output to the serial window 
+         response+=c;            // read the next character.        response+=c;
+        Serial.print(response);
+      } 
+delay(1000);
+digitalWrite(buzz,0);
+  ser.println("AT+CIFSR");
+
+  delay(100);
+
+  ser.println("AT+ CIPSTATUS");
+
+  delay(100);
+
+  
+   while(ser.available())
+      {
+        // The esp has data so display its output to the serial window 
+        char c = ser.read();
+         response1+=c;            // read the next character.        response+=c;
+        Serial.print(response1);
+     
+    delay(50);
+   
+      }
+
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print(response1); 
+lcd.clear();
+delay(100);
+lcd.clear();
+lcd.setCursor(0,0);
+   lcd.print("      WIFI");
+   lcd.setCursor(0,1);
+   lcd.print("   CONNECTED");
+   delay(1000);
+}
+
+
+void loop()
+
+{
+volt = analogRead(A4);
+volt = volt*0.0594;
+charge = analogRead(A5);
+charge = charge*0.0594;
+
+gravityTds.setTemperature(temperature); // Set the temperature for compensation
+gravityTds.update();                  // Sample and calculate
+tdsValue = gravityTds.getTdsValue();  // Get the TDS value in ppm
+tds=tdsValue;
+Serial.print("TDS Value:");
+Serial.print(tdsValue, 0);
+Serial.println("ppm");
+
+
+
+
+tru();
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("TDS:"); 
+lcd.print(tds);
+lcd.print("ppm");
+lcd.setCursor(0, 1);
+lcd.print("TURBIDITY:");
+lcd.print(gas);
+lcd.print(" NTU");
+delay(1500);
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("Battery=");
+lcd.print(volt);
+lcd.print(" V");
+
+lcd.setCursor(0,1);
+lcd.print("Solar=");
+lcd.print(charge);
+lcd.print(" V");
+//delay(1000);
+
+if (charge>=11)
+{
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("   BATTERY ");
+lcd.setCursor(0,1);
+lcd.print(" CHARGING ON"); 
+delay(2000);
+}
+
+state1=volt;
+state2=charge;
+state3=tds;
+state4=gas;
+esp_8266();
+} 
+
+
+
+void esp_8266()
+
+{
+
+   // TCP connection AT+CIPSTART=4,"TCP","184.106.153.149",80 
+
+    String cmd = "AT+CIPSTART=4,\"TCP\",\"";
+
+    cmd += "184.106.153.149"; // api.thingspeak.com
+
+    cmd += "\",80";
+
+    ser.println(cmd);
+
+    Serial.println(cmd); 
+
+    if(ser.find("Error"))
+
+    {
+
+      Serial.println("AT+CIPSTART error");
+      return;
+
+    }                                   // prepare GET string GET https://api.thingspeak.com/update?api_key=LHAG4NSIYJ5UWS6U&field1=0\r\n\r\n
+
+ String getStr = "GET /update?api_key=";
+ getStr += apiKey;
+
+getStr +="&field1=";
+getStr +=String(state1);
+
+getStr +="&field2=";
+getStr +=String(state2);
+
+getStr +="&field3=";
+getStr +=String(state3);
+
+getStr +="&field4=";
+getStr +=String(state4);
+
+
+  getStr += "\r\n\r\n";    // send data length
+
+  cmd = "AT+CIPSEND=4,";
+
+  cmd += String(getStr.length());
+
+  ser.println(cmd);
+
+  Serial.println(cmd);
+
+  delay(1000);
+
+ser.print(getStr);
+
+Serial.println(getStr);   // thingspeak needs 15 sec delay between updates
+delay(6000);  
+  
+lcd.clear();
+lcd.print("DATA UPLOADING");
+lcd.setCursor(0,1);
+lcd.print("ON SERVER.....");
+delay(2000);
+}
+
+
+
+
+
+void tru() 
+{
+
+gas = analogRead(A1);
+gas= gas*0.1;
+gas=102-gas;
+gas=gas-7;
+
+if (gas<20)
+{
+lcd.clear();
+lcd.print("LOW TURBIDITY");
+lcd.setCursor(0,1);
+lcd.print("CAN BE DRINK");
+delay(2000);
+}       
+
+else if ((gas<=40) && (gas>=20))
+{
+lcd.clear();
+lcd.print("MEDIUM TURBIDITY");
+lcd.setCursor(0,1);
+lcd.print("USE FOR WASHING");
+delay(2000);
+} 
+
+else if (gas>=40)
+{
+digitalWrite(buzz,1);
+lcd.clear();
+lcd.print("HIGH TURBIDITY");
+lcd.setCursor(0,1);
+lcd.print("POOR QUALITY");
+delay(2000);
+digitalWrite(buzz,0);
+} 
+
+}  
