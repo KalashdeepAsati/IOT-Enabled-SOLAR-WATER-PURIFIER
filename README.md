@@ -35,6 +35,8 @@
     <li><a href="#key-features--technical-specs">Key Features & Technical Specs</a></li>
     <li><a href="#tech-stack--hardware">Tech Stack & Hardware</a></li>
     <li><a href="#system-architecture">System Architecture</a></li>
+    <li><a href="#directory-structure">Directory Structure</a></li>
+    <li><a href="#core-firmware-logic">Core Firmware Logic</a></li>
     <li><a href="#performance-data">Performance Data</a></li>
     <li><a href="#getting-started">Getting Started</a></li>
   </ol>
@@ -58,38 +60,24 @@
 ## 🛠️ Tech Stack & Hardware
 
 **Languages, Firmware & Libraries**
-* **Embedded C**
-* **Arduino-IDE**
+* **Embedded C** | **Arduino-IDE**
 * **Libraries:** `GravityTDS.h`, `LiquidCrystal.h`, `LiquidCrystal_I2C`, `SoftwareSerial.h`
 
 **Microcontrollers & Core Electronics**
-* **Arduino-Nano**
-* **ESP8266**
-* **PCF8574-I2C-Expander**
-* **Optoisolated-Relays**
-* **Buck-Converters**
+* **Arduino-Nano** | **ESP8266**
+* **PCF8574-I2C-Expander** | **Optoisolated-Relays** | **Buck-Converters**
 
 **Cloud Services, APIs & Protocols**
-* **ThinkSpeak**
-* **ThingSpeak-Write-API**
-* **Protocols:** **TCP/IP**, **HTTP-GET**, **I2C**, **UART**
+* **ThingSpeak** | **ThingSpeak-Write-API**
+* **Protocols:** TCP/IP, HTTP-GET, I2C, UART
 
 **Sensors & User Interface**
-* **Gravity-TDS-Probe**
-* **16×2-I2C-LCD-Display**
-* **5V-Buzzer**
+* **Gravity-TDS-Probe** | **16×2-I2C-LCD-Display** | **5V-Buzzer**
 
-**Energy & Power Systems**
-* **12V-25W-Polycrystalline-Solar-Panel**
-* **12V-7AH-Li-Po-Battery**
-* **Solar-Charge-Controller**
-
-**Purification & Hydraulics**
-* **24V-DC-Booster-Pump**
-* **Granular-Activated-Carbon-Filter**
-* **5-Micron-PP-Sediment-Filter**
-* **Mineral-Remineralization-Cartridge**
-* **11W-UV-C-Sterilizer**
+**Energy & Purification Systems**
+* **12V-25W-Polycrystalline-Solar-Panel** | **12V-7AH-Li-Po-Battery** | **Solar-Charge-Controller**
+* **24V-DC-Booster-Pump** | **Granular-Activated-Carbon-Filter** | **5-Micron-PP-Sediment-Filter**
+* **Mineral-Remineralization-Cartridge** | **11W-UV-C-Sterilizer**
 
 ## 🧠 System Architecture
 
@@ -99,13 +87,90 @@
   <img src="assets/System Architecture of Smart Water Purification System with IoT-Based Monitoring and Control.png" alt="System Architecture Diagram" width="800">
 </p>
 
+## 📁 Directory Structure
+
+```text
+├── assets/
+│   ├── System Architecture of Smart Water Purification System with IoT-Based Monitoring and Control.png
+│   ├── Total Dissolved Solids (TDS) reduction curve...
+│   └── ...
+├── firmware/
+│   └── main.ino          # Core Arduino Nano Embedded C Firmware
+├── README.md
+```
+
+## 💻 Core Firmware Logic
+
+[cite_start]The firmware, developed in the Arduino IDE, manages sensor acquisition and cloud transmission[cite: 210]. [cite_start]It utilizes temperature compensation for accurate TDS readings and formats HTTP GET requests for the ThingSpeak API[cite: 246, 274].
+
+Below is an excerpt of the core telemetry and sensor logic found in `firmware/main.ino`:
+
+```cpp
+#include <LiquidCrystal.h>
+#include <SoftwareSerial.h>
+#include "GravityTDS.h"
+
+LiquidCrystal lcd(2,3,4,5,6,7); 
+#define TdsSensorPin A0
+GravityTDS gravityTds;
+SoftwareSerial ser(10, 11); // RX, TX for ESP8266
+
+String apiKey = "E2CGS9HTVP8P2M3V"; 
+
+void setup() {
+  Serial.begin(115200);
+  ser.begin(115200);
+  pinMode(8, OUTPUT); // Alert Buzzer
+  
+  gravityTds.setPin(TdsSensorPin);
+  gravityTds.setAref(5.0); // 5V Reference for ADC stability
+  gravityTds.setAdcRange(1024);
+  gravityTds.begin();
+
+  lcd.begin(16,2);
+  lcd.print("SYSTEM STARTING");
+}
+
+void loop() {
+  // Temperature compensation for accurate TDS reading
+  gravityTds.setTemperature(25);
+  gravityTds.update();
+  float tdsValue = gravityTds.getTdsValue();
+
+  lcd.setCursor(0,1);
+  lcd.print("TDS: "); lcd.print(tdsValue);
+  
+  // Example call to upload data
+  updateThingSpeak(12.83, 12.71, tdsValue, 1.5); 
+  delay(15000); // Polling delay
+}
+
+void updateThingSpeak(float batV, float solV, float tds, float ntu) {
+  String cmd = "AT+CIPSTART=4,\"TCP\",\"184.106.153.149\",80"; 
+  ser.println(cmd);
+  if(ser.find("Error")) return;
+  
+  String getStr = "GET /update?api_key=" + apiKey;
+  getStr += "&field1=" + String(batV); 
+  getStr += "&field2=" + String(solV); 
+  getStr += "&field3=" + String(tds);  
+  getStr += "&field4=" + String(ntu);  
+  getStr += "\r\n\r\n";
+  
+  ser.print("AT+CIPSEND=4,");
+  ser.println(getStr.length());
+  delay(1000);
+  ser.print(getStr); 
+}
+```
+
 ## 📊 Performance Data
 
-[cite_start]Field testing in the Sehore district validated the system's operational efficacy against World Health Organization (WHO) Guidelines[cite: 282, 421]. 
+Field testing in the Sehore district validated the system's operational efficacy against World Health Organization (WHO) Guidelines[cite: 282, 421]. 
 
-* [cite_start]**Chemical Purification:** Raw groundwater exhibiting hazardous concentrations of 550 ppm was successfully reduced to a highly potable 120 ppm, representing a 78.1% reduction in dissolved solids[cite: 313, 315, 431, 432].
-* [cite_start]**Physical Clarity:** Turbidity testing confirmed a 97.44% reduction[cite: 50]. [cite_start]Post-treatment levels stabilized below 2.5 NTU, completely preventing "shadowing" effects during the final UV-C sterilization stage[cite: 321, 328, 425].
-* [cite_start]**Energy Stability:** Field telemetry confirmed the Li-Po battery voltage remained stable between 12.5V and 13.13V under operational loads, with the solar panel tracking peak inputs of 12.71V during standard sun hours[cite: 283, 294, 300]. [cite_start]The charging logic securely maintains the state of charge within the safe 11.1V to 12.9V operating threshold[cite: 291].
+* **Chemical Purification:** Raw groundwater exhibiting hazardous concentrations of 550 ppm was successfully reduced to a highly potable 120 ppm, representing a 78.1% reduction in dissolved solids[cite: 313, 315, 431, 432].
+* **Physical Clarity:** Turbidity testing confirmed a 97.44% reduction[cite: 50]. Post-treatment levels stabilized below 2.5 NTU, completely preventing "shadowing" effects during the final UV-C sterilization stage[cite: 321, 328, 425].
+* **Energy Stability:** Field telemetry confirmed the Li-Po battery voltage remained stable between 12.5V and 13.13V under operational loads, with the solar panel tracking peak inputs of 12.71V during standard sun hours[cite: 283, 294, 300]. The charging logic securely maintains the state of charge within the safe 11.1V to 12.9V operating threshold[cite: 291].
 
 ### Water Quality Dashboards
 <p align="center">
@@ -129,20 +194,20 @@ To replicate this project, follow these hardware and software setup steps.
 > **Warning:** Follow the hydraulic plumbing sequence exactly (`Pump -> Carbon -> Sediment -> Mineral -> UV-C`) to protect the fragile quartz sleeve from particulate fouling. Ensure the optoisolated relays are properly wired between the 24V pump and the 5V logic circuit to prevent back-EMF from causing microcontroller brown-outs.
 
 ### Installation
-1. Clone the repository.
+1. **Clone the repository:**
    ```sh
    git clone [https://github.com/yourusername/solar-iot-purifier.git](https://github.com/yourusername/solar-iot-purifier.git)
-2. Open the primary firmware file in the Arduino IDE.
+   ```
+2. **Open the project:** Open the `firmware/main.ino` file in the Arduino IDE (or VS Code with PlatformIO).
+3. **Install Dependencies:** Install the required libraries via the Library Manager (`GravityTDS`, `LiquidCrystal_I2C`).
+4. **Configure Telemetry:** Update the ThingSpeak API Key in the source code if necessary:
+   ```cpp
+   String apiKey = "E2CGS9HTVP8P2M3V";
+   ```
+5. **Flash the Firmware:** Compile and flash the code to the Arduino Nano (ATmega328P).
+6. **Cloud Setup:** Configure your ThingSpeak dashboard to receive 4 telemetry fields: `Field 1` (Battery Voltage), `Field 2` (Solar Voltage), `Field 3` (TDS), and `Field 4` (Turbidity).
 
-3. Install the required libraries via the Library Manager (GravityTDS, LiquidCrystal_I2C).
-
-4. Enter your private ThingSpeak API Key in the source code:
-   C++
-   String apiKey = "YOUR_API_KEY_HERE";
-   Compile and flash the code to the Arduino Nano (ATmega328P).
-
-5. Configure your ThingSpeak dashboard to receive 4 telemetry fields: Battery Voltage, Solar Voltage, TDS, and Turbidity.
-
+<br />
 <div align="center">
 <i>"Transforming passive utilities into active, data-driven resources for smart villages."</i>
 </div>
